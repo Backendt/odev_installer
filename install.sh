@@ -102,15 +102,11 @@ check_ssh_key() {
 	local ssh_pub_key_path="/home/odoo/.ssh/id_ed25519.pub"
 	user_gram="$(cut -d '-' -f 1 </etc/hostname)"
 	if [[ -f "${ssh_pub_key_path}" ]]; then
-		log "${BLUE}There is already an exisiting SSH key on this system(${ssh_key_path}) ${ENDCOLOR}"
-		log "${BLUE}Please make sure the public key below is referenced in your GitHub profile [https://github.com/settings/keys]:${ENDCOLOR}"
-		log "$(<$ssh_pub_key_path)"
+        log "${BLUE}An SSH key is already present.${ENDCOLOR}"
 	else
 		log "${BLUE}SSH key not found. Generating new ed25519 SSH key for '${user_gram}@odoo.com'.${ENDCOLOR}"
 		log "${BLUE}Path to add the key: ${ssh_key_path}${ENDCOLOR}"
 		run ssh-keygen -t ed25519 -C "${user_gram}@odoo.com" -f "$ssh_key_path"
-		log "${BLUE}Please add the public key below to your GitHub profile [https://github.com/settings/keys]:${ENDCOLOR}"
-		echo "$(<$ssh_pub_key_path)"
 	fi
 	log "${BLUE}Adding Github fingerprints to known_hosts file if needed${ENDCOLOR}"
 	if [[ -f "${ssh_known_hosts_path}" ]] && grep -qw "github.com" $ssh_known_hosts_path; then
@@ -123,7 +119,9 @@ check_ssh_key() {
 			log "${BLUE}GitHub SSH access validated${ENDCOLOR}"
 			break
         else
-            log "${BLUE}No GitHub SSH access."
+            log "${BLUE}No GitHub SSH access. Please add this SSH key to your Github account:"
+            log "$(<$ssh_pub_key_path)"
+            xdg-open "https://github.com/settings/keys"
 		fi
 		read -r "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
 	done
