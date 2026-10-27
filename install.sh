@@ -5,15 +5,13 @@
 ## Odoo OXP 2026 - Master=20
 
 set -Eeuo pipefail
-DEBUG_FILE="/var/log/odoo_install.debug"
-LOG="/var/log/odoo_installation.log"
+ODOO_VERSION="20.0" # Odoo repository branch
+DEBUG_FILE="/var/log/odev_installer.debug"
+LOG="/var/log/odev_installer.log"
 DB_NAME=""
-ALIAS_NAME="odoo-localDB"
-MANAGER_SHORTCUT_PATH="/home/odoo/Desktop/odoo_local_databases_manager.desktop"
-ODOO_SHORTCUT_PATH="/home/odoo/Desktop/odoo_launcher.desktop"
 USER_PASSWORD=""
 POSTGRES_VERSION=18
-ODOO_REPO_PATH="/home/odoo/odoo"
+ODOO_DEBINSTALL_PATH="https://raw.githubusercontent.com/odoo/odoo/refs/heads/$ODOO_VERSION/setup/debinstall.sh"
 ODEV_REPO_PATH="/home/odoo/odev"
 # https://www.odoo.com/documentation/master/administration/on_premise/source.html#postgresql
 
@@ -186,7 +184,7 @@ install_wkhtmltopdf() {
 
 install_phonenumbers(){
 	log "${BLUE}  Installing python3-phonenumbers ...${ENDCOLOR}"
-	run sudo apt-get install -y python3-phonenumbers
+	run_sudo apt-get install -y python3-phonenumbers
 	if python3 -c "import phonenumbers" &> /dev/null ; then
 		ok "python3-phonenumbers installed"
 	else
@@ -196,11 +194,11 @@ install_phonenumbers(){
 
 install_pgvector() {
 	log "${BLUE}  Installing pgvector ...${ENDCOLOR}"
-	run sudo apt-get install -y postgresql-common
+	run_sudo apt-get install -y postgresql-common
     if [ ! -f /etc/apt/sources.list.d/pgdg.sources ]; then # TODO test it
-        sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+        run_sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
     fi
-	run sudo apt-get install -y "postgresql-${POSTGRES_VERSION}-pgvector"
+	run_sudo apt-get install -y "postgresql-${POSTGRES_VERSION}-pgvector"
 	echo 'trusted = true' | sudo tee -a "$(pg_config --sharedir)/extension/vector.control"
 }
 
@@ -249,13 +247,7 @@ check_deps() {
 	check_cmd curl
 	check_cmd psql
 	check_cmd wkhtmltopdf
-	log "--- 4. Folders ---"
-	exists "$ODOO_REPO_PATH"
-	repo_check "$ODOO_REPO_PATH/odoo"
-	repo_check "$ODOO_REPO_PATH/enterprise"
-	repo_check "$ODOO_REPO_PATH/design-themes"
-	repo_check "$ODOO_REPO_PATH/industry"
-	log "--- 6. Extra dependencies ---"
+	log "--- 4. Extra dependencies ---"
 	check_cmd rtlcss
 	check_cmd mailcatcher
 	echo "Report saved to $DEBUG_FILE"
@@ -263,7 +255,7 @@ check_deps() {
 
 debinstall_sh() {
     echo "${BLUE} Installing required packages: ${ENDCOLOR}"
-	run_sudo "${ODOO_REPO_PATH}/odoo/setup/debinstall.sh"
+	curl -s "${ODOO_DEBINSTALL_PATH}" | run_sudo sh /tmp/debinstall.sh
 }
 
 postgresql_setup() {
@@ -293,21 +285,6 @@ install_mailcatcher() {
 	fi
 }
 
-create_database() {
-	local pattern="^[0-9a-zA-Z_-]{1,60}$"
-	while :; do
-		DB_NAME=$(inputdata "${GREEN}Name of your database you want to create (leave empty to create default one named odoo): ${ENDCOLOR}")
-		[[ -z "$DB_NAME" ]] && DB_NAME="odoo"
-		[[ $DB_NAME =~ $pattern ]] && break
-		echo "${RED}Invalid name: only a-z, A-Z, 0-9, _ and - allowed.${ENDCOLOR}"
-	done
-	if [[ -n "$DB_NAME" ]]; then
-		cd "$ODOO_REPO_PATH/odoo"
-		log "${BLUE}Creating database '$DB_NAME' (a few minutes) ...${ENDCOLOR}"
-		run python3 odoo-bin -c /home/odoo/.odoorc -d "$DB_NAME" -i base --stop-after-init
-	fi
-}
-
 clean_database() {
 	echo "${RED} This db that will be DELETED: '$DB_NAME' ${ENDCOLOR}"
 	sudo -u postgres psql -Atc "SELECT datname FROM pg_database where name ilike '$DB_NAME';"
@@ -334,37 +311,6 @@ check_memory() {
 		run git config --global http.postBuffer 524288000
 		log "${BLUE}GIT config changed to increase HTTP POST buffer.${ENDCOLOR}"
 	fi
-}
-
-add_alias() { # TODO find a way to add this alias in the terminal used by the user -> add a small wrapper in PATH
-	if grep -qw $ALIAS_NAME /home/odoo/.bashrc; then
-		log "${BLUE}Alias already exists. Skipping.${ENDCOLOR}"
-	else
-		log "${BLUE}Adding a bash alias${ENDCOLOR}"
-		echo "alias $ALIAS_NAME='cd $ODOO_REPO_PATH/odoo; python3 ./odoo-bin'" >>/home/odoo/.bashrc
-	fi
-}
-
-add_desktop_shortcuts() {
-	log "${BLUE}Adding desktop shortcuts${ENDCOLOR}"
-	{
-		echo "[Desktop Entry]"
-		echo "Icon=text-html"
-		echo "Name=Odoo - Local DB manager"
-		echo "Type=Application"
-		echo "Exec= xdg-open http://localhost:8069/web/database/manager"
-	} >"${MANAGER_SHORTCUT_PATH}"
-
-	{
-		echo "[Desktop Entry]"
-		echo "Exec=$ODOO_REPO_PATH/odoo/odoo-bin"
-		echo "GenericName=Launch Odoo Local DB"
-		echo "Icon=system-run"
-		echo "Name=Launch Odoo Local DB"
-		echo "StartupNotify=true"
-		echo "Terminal=true"
-		echo "Type=Application"
-	} >"$ODOO_SHORTCUT_PATH"
 }
 
 install_odev() {
@@ -402,10 +348,7 @@ odoo_local_installation() {
     install_mailcatcher # mail
 	postgresql_setup
 	setup_odoorc # Prior create_database to add enterprise in path
-	create_database
 	set_expiration_date
-	add_alias
-	add_desktop_shortcuts
     install_deadsnake_ppa
     install_odev
 }
