@@ -121,19 +121,13 @@ check_ssh_key() {
 		curl --silent https://api.github.com/meta | jq --raw-output '"github.com "+.ssh_keys[]' >>$ssh_known_hosts_path #https://docs.github.com/en/rest/meta/meta?apiVersion=2026-03-10#get-github-meta-information
 	fi
 	while true; do
-		answer=$(inputdata "${GREEN}Have you added your public key to your GitHub account ? [y/N]: ${ENDCOLOR}")
-		if [[ "$answer" =~ ^[Yy]$ ]]; then
-			log "${BLUE}Starting the installation in 5s ...${ENDCOLOR}"
-			sleep 5
-		else
-			log "${BLUE}Please launch this script again once your key have been added to your Github account. Exit.${ENDCOLOR}"
-			exit 0
-		fi
 		if git ls-remote git@github.com:odoo/enterprise.git HEAD >/dev/null 2>&1; then
 			log "${BLUE}GitHub SSH access validated${ENDCOLOR}"
 			break
+        else
+            log "${BLUE}No GitHub SSH access."
 		fi
-		log "${RED}ERROR: GitHub SSH access could not be validated. Please check that you entered the right key into your Github account${ENDCOLOR}"
+		read -r "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
 	done
 }
 
@@ -267,53 +261,6 @@ check_deps() {
 	echo "Report saved to $DEBUG_FILE"
 }
 
-clone_repository() {
-	local repo_name="$1"
-	log "${BLUE}  Check and clone ${repo_name} repositorie into $ODOO_REPO_PATH/\n  Might be long if it's the first install on your laptop, so, take a coffee... ${ENDCOLOR}"
-	cd $ODOO_REPO_PATH
-	if [[ ! -d "$repo_name" ]]; then
-		git clone --progress "git@github.com:odoo/${repo_name}.git" 2>&1 | tee -a "$LOG"
-	else
-        answer=$(inputdata "${GREEN}'${repo_name}' directory already exists, do you want to overwrite it ? [y/N]: ${ENDCOLOR}")
-        if [[ "$answer" =~ ^[Yy]$ ]]; then
-            run rm -rf "./${repo_name}"
-            git clone --progress "git@github.com:odoo/${repo_name}.git" 2>&1 | tee -a "$LOG"
-            log "${BLUE} Skipping clone of '${repo_name}'.${ENDCOLOR}"
-        fi
-	fi
-}
-
-update_repository() {
-	local repo_name="$1"
-	log "${BLUE}  Switching repositories ${repo_name} to master and update it ...${ENDCOLOR}"
-	cd "${ODOO_REPO_PATH}/${repo_name}"
-	git switch master
-	log "Last '${repo_name}' commit HASH : $(git rev-parse HEAD)"
-	git pull --rebase --progress 2>&1 | tee -a "$LOG"
-	log "New '${repo_name}' commit HASH : $(git rev-parse HEAD)"
-}
-
-fetch_git_repositories() {
-	# clone ony master branch to save disk space and cloning time
-	mkdir -p "${ODOO_REPO_PATH}"
-
-	clone_repository "odoo"
-	clone_repository "enterprise"
-	clone_repository "design-themes"
-	clone_repository "industry"
-
-	update_repository "odoo"
-	update_repository "enterprise"
-	update_repository "design-themes"
-	update_repository "industry"
-
-	log "${BLUE}  Installing Odoo debian dependencies (setup/debinstall.sh)${ENDCOLOR}"
-	echo "${BLUE}  It might take a while ...${ENDCOLOR}"
-	echo "${BLUE}  This will require to create a new database ${ENDCOLOR}"
-	debinstall_sh
-	return 0
-}
-
 debinstall_sh() {
     echo "${BLUE} Installing required packages: ${ENDCOLOR}"
 	run_sudo "${ODOO_REPO_PATH}/odoo/setup/debinstall.sh"
@@ -433,15 +380,6 @@ install_odev() {
     odev setup
 }
 
-print_end_message() {
-	log "${BLUE}Installation complete.${ENDCOLOR}"
-	echo "${BLUE}Full log: $LOG${ENDCOLOR}"
-	echo "${BLUE}To start the new DB enter this command in a new terminal:${ENDCOLOR}"
-	echo "${BLUE}	cd $ODOO_REPO_PATH/odoo && python3 ./odoo-bin ${ENDCOLOR}"
-	echo "${BLUE}This will start your DB, that you will be able to manage on http://localhost:8069/web/database/manager (shortcut added to your desktop) ${ENDCOLOR}"
-	echo "${BLUE}To end the DB, press CTRL + c${ENDCOLOR}"
-}
-
 odoo_local_installation() {
 	clear
 	check_memory
@@ -451,7 +389,6 @@ odoo_local_installation() {
 	check_ssh_key
     install_rtlcss      # right-to-left
     install_mailcatcher # mail
-	fetch_git_repositories
 	postgresql_setup
 	setup_odoorc # Prior create_database to add enterprise in path
 	create_database
@@ -459,7 +396,6 @@ odoo_local_installation() {
 	add_alias
 	add_desktop_shortcuts
     install_odev
-	print_end_message
 }
 
 if [ $# -eq 0 ]; then
