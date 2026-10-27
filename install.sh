@@ -220,10 +220,23 @@ install_rtlcss() {
 		run_sudo npm install -g rtlcss
 		answer=$(inputdata "${GREEN}Remove NPM ? [y/N]: ${ENDCOLOR}")
 		if [[ "$answer" =~ ^[Yy]$ ]]; then
-			log "${BLUE}  Removing npm ...${ENDCOLOR}"
-			run_sudo apt-get -y remove npm
+			log "${BLUE}Removing npm...${ENDCOLOR}"
+			run_sudo apt-get -y purge npm
 		fi
 	fi
+}
+
+install_claude() {
+    log "${BLUE}Installing claude code...${ENDCOLOR}"
+    install_cmd npm
+    run_sudo npm install -g @anthropic-ai/claude-code
+    log "${BLUE}Removing NPM...${ENDCOLOR}"
+    run_sudo apt-get -y purge npm
+
+    log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
+    echo -e "#!/bin/sh\nodev ai -f" > ~/.local/bin/claude
+    chmod +x ~/.local/bin/claude
+    hash -r 2>/dev/null || true
 }
 
 install_deps() {
@@ -231,6 +244,7 @@ install_deps() {
 	install_cmd git
 	install_cmd curl
 	install_cmd psql postgresql-18
+    install_claude
 	install_virtualenv
 	install_phonenumbers
 	install_wkhtmltopdf
