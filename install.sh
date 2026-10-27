@@ -192,6 +192,16 @@ install_phonenumbers(){
 	fi
 }
 
+install_virtualenv(){
+	log "${BLUE}  Installing python3-virtualenv...${ENDCOLOR}"
+	run_sudo apt-get install -y python3-virtualenv
+	if command -v virtualenv &> /dev/null ; then
+		ok "python3-virtualenv installed"
+	else
+		fail "python3-virtualenv failed to install"
+	fi
+}
+
 install_pgvector() {
 	log "${BLUE}  Installing pgvector ...${ENDCOLOR}"
 	run_sudo apt-get install -y postgresql-common
@@ -199,7 +209,7 @@ install_pgvector() {
         run_sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
     fi
 	run_sudo apt-get install -y "postgresql-${POSTGRES_VERSION}-pgvector"
-	echo 'trusted = true' | sudo tee -a "$(pg_config --sharedir)/extension/vector.control"
+	echo 'trusted = true' | run_sudo tee -a "$(pg_config --sharedir)/extension/vector.control"
 }
 
 install_rtlcss() {
@@ -216,21 +226,15 @@ install_rtlcss() {
 	fi
 }
 
-install_virtualenv() {
-    command -v uv >/dev/null && uv install virtualenv && return 0
-    command -v pipx >/dev/null || sudo apt install -y pipx
-    pipx install virtualenv
-}
-
 install_deps() {
 	log "${BLUE}Installing system dependencies ...${ENDCOLOR}"
 	install_cmd git
 	install_cmd curl
 	install_cmd psql postgresql-18
+	install_virtualenv
 	install_phonenumbers
 	install_wkhtmltopdf
 	install_pgvector
-    install_virtualenv
 	log "${BLUE}Dependencies ready.${ENDCOLOR}"
 }
 
