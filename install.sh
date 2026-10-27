@@ -212,20 +212,6 @@ install_pgvector() {
 	echo 'trusted = true' | run_sudo tee -a "$(pg_config --sharedir)/extension/vector.control"
 }
 
-install_rtlcss() {
-	answer=$(inputdata "${GREEN}Need RTLCSS ? It's for the Odoo interface for right-to-left languages (Arabic, Hebrew). Only needed if you work with those [y/N]: ${ENDCOLOR}")
-	if [[ "$answer" =~ ^[Yy]$ ]]; then
-		install_cmd npm
-		log "${BLUE}  Installing rtlcss ...${ENDCOLOR}"
-		run_sudo npm install -g rtlcss
-		answer=$(inputdata "${GREEN}Remove NPM ? [y/N]: ${ENDCOLOR}")
-		if [[ "$answer" =~ ^[Yy]$ ]]; then
-			log "${BLUE}Removing npm...${ENDCOLOR}"
-			run_sudo apt-get -y purge npm
-		fi
-	fi
-}
-
 install_claude() {
     log "${BLUE}Installing claude code...${ENDCOLOR}"
     install_cmd npm
@@ -265,9 +251,6 @@ check_deps() {
 	check_cmd curl
 	check_cmd psql
 	check_cmd wkhtmltopdf
-	log "--- 4. Extra dependencies ---"
-	check_cmd rtlcss
-	check_cmd mailcatcher
 	echo "Report saved to $DEBUG_FILE"
 }
 
@@ -290,17 +273,6 @@ postgresql_setup() {
 setup_odoorc() {
 	log "${GREEN}Fetching .odoorc configuration ...${ENDCOLOR}"
 	run curl -fsSL -o /home/odoo/.odoorc "${odoorc_gist_path}"
-}
-
-install_mailcatcher() {
-	echo "Mailcatcher is a local mailing solution. If you want to send email and visual them without a mail server"
-	answer=$(inputdata "${GREEN}Do you want to install it [y/N]: ${ENDCOLOR}")
-	if [[ "$answer" =~ ^[Yy]$ ]]; then
-		have mailcatcher && return 0
-		log "${BLUE}  Installing MailCatcher ...${ENDCOLOR}"
-		run_sudo apt-get install -y ruby ruby-dev
-		run_sudo gem install mailcatcher
-	fi
 }
 
 clean_database() {
@@ -362,8 +334,6 @@ odoo_local_installation() {
 	check_python
 	install_deps
 	check_ssh_key
-    install_rtlcss      # right-to-left
-    install_mailcatcher # mail
 	postgresql_setup
 	setup_odoorc # Prior create_database to add enterprise in path
 	set_expiration_date
