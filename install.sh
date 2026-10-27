@@ -341,7 +341,7 @@ install_odev() {
         cd "$ODEV_REPO_PATH"
     fi
     ./install.sh
-    odev setup
+    odev setup -f
     log "${BLUE}Odev is installed ! Installing plugins..${ENDCOLOR}"
     odev plugin --enable odoo-odev/odev-plugin-ai
 }
