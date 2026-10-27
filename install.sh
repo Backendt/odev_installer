@@ -190,16 +190,6 @@ install_phonenumbers(){
 	fi
 }
 
-install_virtualenv(){
-	log "${BLUE}  Installing python3-virtualenv...${ENDCOLOR}"
-	run_sudo apt-get install -y python3-virtualenv
-	if command -v virtualenv &> /dev/null ; then
-		ok "python3-virtualenv installed"
-	else
-		fail "python3-virtualenv failed to install"
-	fi
-}
-
 install_pgvector() {
 	log "${BLUE}  Installing pgvector ...${ENDCOLOR}"
 	run_sudo apt-get install -y postgresql-common
@@ -212,12 +202,16 @@ install_pgvector() {
 
 install_claude() {
     log "${BLUE}Installing claude code...${ENDCOLOR}"
-    install_cmd npm
-    run_sudo npm install -g @anthropic-ai/claude-code
+    run_sudo curl -fsSL 'https://downloads.claude.ai/keys/claude-code.asc' \
+  -o /etc/apt/keyrings/claude-code.asc
+    echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" \
+  | run_sudo tee /etc/apt/sources.list.d/claude-code.list
+    run_sudo apt-get update
+    install_cmd claude claude-code
+
     log "${BLUE}Installing odoo-ps claude-code skills...${ENDCOLOR}"
+    install_cmd npm # Note that removing npm also removes the skills
     npx -y skills add 'odoo-ps/ps-ai-skills#main' --skill odev --skill odoo_coding_guidelines -g -y > /dev/null
-    log "${BLUE}Removing NPM...${ENDCOLOR}"
-    run_sudo apt-get -y purge npm
 
     log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
     echo -e "#!/bin/sh\nodev ai -f" > ~/.local/bin/claude
@@ -229,9 +223,10 @@ install_deps() {
 	log "${BLUE}Installing system dependencies ...${ENDCOLOR}"
 	install_cmd git
 	install_cmd curl
+	install_cmd gpg gnupg
 	install_cmd psql postgresql-18
+	install_cmd virtualenv python3-virtualenv
     install_claude
-	install_virtualenv
 	install_phonenumbers
 	install_wkhtmltopdf
 	install_pgvector
