@@ -123,7 +123,8 @@ check_ssh_key() {
             log "$(<$ssh_pub_key_path)"
             xdg-open "https://github.com/settings/keys"
 		fi
-		read -r "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
+		echo "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
+        read -r _
 	done
 }
 
@@ -197,15 +198,17 @@ install_pgvector() {
         run_sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
     fi
 	run_sudo apt-get install -y "postgresql-${POSTGRES_VERSION}-pgvector"
-	echo 'trusted = true' | run_sudo tee -a "$(pg_config --sharedir)/extension/vector.control"
+    cp "$(pg_config --sharedir)/extension/vector.control" /tmp/vector.control
+	echo 'trusted = true' | tee -a /tmp/vector.control
+    run_sudo mv /tmp/vector.control "$(pg_config --sharedir)/extension/vector.control" 
 }
 
 install_claude() {
     log "${BLUE}Installing claude code...${ENDCOLOR}"
     run_sudo curl -fsSL 'https://downloads.claude.ai/keys/claude-code.asc' \
   -o /etc/apt/keyrings/claude-code.asc
-    echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" \
-  | run_sudo tee /etc/apt/sources.list.d/claude-code.list
+    echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" > /tmp/claude.list
+    run_sudo mv /tmp/claude.list /etc/apt/sources.list.d/claude-code.list
     run_sudo apt-get update
     install_cmd claude claude-code
 
