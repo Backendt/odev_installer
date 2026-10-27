@@ -1,11 +1,9 @@
-# odoo_script
+# Installer for Odev
+https://github.com/odoo-odev/odev
 
 ## Installation
-
-USE THIS KNOWLEDGE PAGE :
-
 Open a terminal (CTRL + ALT + T)
-run this commands:
+run this command:
 ```sh
-curl https://raw.githubusercontent.com/roole-odoo/odoo_script/refs/heads/main/odoo_install.sh | sh
+curl https://raw.githubusercontent.com/Backendt/odev_installer/refs/heads/main/install.sh | sh
 ```
