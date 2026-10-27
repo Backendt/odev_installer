@@ -369,7 +369,7 @@ add_desktop_shortcuts() {
 
 install_odev() {
     if [ -d "$ODEV_REPO_PATH" ]; then
-        log "${BLUE}Odev repository already exists. Updating it..."
+        log "${BLUE}Odev repository already exists. Updating it...${ENDCOLOR}"
         cd "$ODEV_REPO_PATH"
         git pull
     else
@@ -378,6 +378,17 @@ install_odev() {
     fi
     ./install.sh
     odev setup
+    log "${BLUE}Odev is installed ! Installing plugins..${ENDCOLOR}"
+    odev plugin --enable odoo-odev/odev-plugin-ai
+}
+
+install_deadsnake_ppa() {
+    if compgen -G '/etc/apt/sources.list.d/deadsnakes-ubuntu-ppa-*.sources' > /dev/null; then
+        log "${BLUE}Deadsnakes PPA is already installed. Skipping..${ENDCOLOR}"
+        return 0
+    fi
+    run_sudo add-apt-repository ppa:deadsnakes/ppa -y
+    run_sudo apt update
 }
 
 odoo_local_installation() {
@@ -395,6 +406,7 @@ odoo_local_installation() {
 	set_expiration_date
 	add_alias
 	add_desktop_shortcuts
+    install_deadsnake_ppa
     install_odev
 }
 
