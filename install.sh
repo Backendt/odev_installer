@@ -214,6 +214,8 @@ install_claude() {
     log "${BLUE}Installing claude code...${ENDCOLOR}"
     install_cmd npm
     run_sudo npm install -g @anthropic-ai/claude-code
+    log "${BLUE}Installing odoo-ps claude-code skills...${ENDCOLOR}"
+    npx -y skills add 'odoo-ps/ps-ai-skills#main' --skill odev --skill odoo_coding_guidelines -g -y > /dev/null
     log "${BLUE}Removing NPM...${ENDCOLOR}"
     run_sudo apt-get -y purge npm
 
