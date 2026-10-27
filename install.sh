@@ -5,21 +5,19 @@
 ## Odoo OXP 2026 - Master=20
 
 set -Eeuo pipefail
-DEBUG_FILE="/home/odoo/Desktop/odoo_install.debug"
+DEBUG_FILE="/var/log/odoo_install.debug"
 LOG="/var/log/odoo_installation.log"
 DB_NAME=""
-ADVANCED_MODE=0
-UPDATE_MODE=0
 ALIAS_NAME="odoo-localDB"
 MANAGER_SHORTCUT_PATH="/home/odoo/Desktop/odoo_local_databases_manager.desktop"
 ODOO_SHORTCUT_PATH="/home/odoo/Desktop/odoo_launcher.desktop"
 USER_PASSWORD=""
 POSTGRES_VERSION=18
+ODOO_REPO_PATH="/home/odoo/odoo"
+ODEV_REPO_PATH="/home/odoo/odev"
 # https://www.odoo.com/documentation/master/administration/on_premise/source.html#postgresql
 
 odoorc_gist_path="https://gist.githubusercontent.com/Abridbus/a4c1ada1e8c61c04ab68cc8ddbb827b1/raw/4614022d0c21bbc02f35254d59c5cefcdbedb12d/.odoorc"
-knowledge_article="https://www.odoo.com/odoo/knowledge/72239"
-script_gist_path="https://gist.github.com/Abridbus/03d827605d12ba999998b4cc9f778085"
 
 RED=$'\e[31m'
 GREEN=$'\e[32m'
@@ -29,8 +27,9 @@ ENDCOLOR=$'\e[0m'
 create_log_file() {
 	# Create a LOG file a each run
 	echo "$USER_PASSWORD" | sudo -v -S >/dev/null 2>&1
-	sudo touch "$LOG"
+	sudo touch "$LOG" "$DEBUG_FILE"
 	sudo chown "$USER" "$LOG"
+	sudo chown "$USER" "$DEBUG_FILE"
 	: >"$LOG"
 	sudo -k
 }
@@ -93,7 +92,7 @@ install_cmd() {
 ask_password() {
 	while read -r -t 0; do read -r; done
 	while ! (echo "$USER_PASSWORD" | sudo -S -k -v >/dev/null 2>&1); do
-		read -r -s -p "${GREEN}Enter you password (output is silent): ${ENDCOLOR}" USER_PASSWORD
+        USER_PASSWORD=$(systemd-ask-password "Enter your password:")
 		echo ""
 	done
 }
@@ -204,9 +203,11 @@ install_phonenumbers(){
 install_pgvector() {
 	log "${BLUE}  Installing pgvector ...${ENDCOLOR}"
 	run sudo apt-get install -y postgresql-common
-	sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+    if [ ! -f /etc/apt/sources.list.d/pgdg.sources ]; then # TODO test it
+        sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+    fi
 	run sudo apt-get install -y "postgresql-${POSTGRES_VERSION}-pgvector"
-	echo 'trusted = true' | sudo tee -a $(pg_config --sharedir)/extension/vector.control
+	echo 'trusted = true' | sudo tee -a "$(pg_config --sharedir)/extension/vector.control"
 }
 
 install_rtlcss() {
@@ -223,6 +224,12 @@ install_rtlcss() {
 	fi
 }
 
+install_virtualenv() {
+    command -v uv >/dev/null && uv install virtualenv && return 0
+    command -v pipx >/dev/null || sudo apt install -y pipx
+    pipx install virtualenv
+}
+
 install_deps() {
 	log "${BLUE}Installing system dependencies ...${ENDCOLOR}"
 	install_cmd git
@@ -231,6 +238,7 @@ install_deps() {
 	install_phonenumbers
 	install_wkhtmltopdf
 	install_pgvector
+    install_virtualenv
 	log "${BLUE}Dependencies ready.${ENDCOLOR}"
 }
 
@@ -248,11 +256,11 @@ check_deps() {
 	check_cmd psql
 	check_cmd wkhtmltopdf
 	log "--- 4. Folders ---"
-	exists /home/odoo/src
-	repo_check /home/odoo/src/odoo
-	repo_check /home/odoo/src/enterprise
-	repo_check /home/odoo/src/design-themes
-	repo_check /home/odoo/src/industry
+	exists "$ODOO_REPO_PATH"
+	repo_check "$ODOO_REPO_PATH/odoo"
+	repo_check "$ODOO_REPO_PATH/enterprise"
+	repo_check "$ODOO_REPO_PATH/design-themes"
+	repo_check "$ODOO_REPO_PATH/industry"
 	log "--- 6. Extra dependencies ---"
 	check_cmd rtlcss
 	check_cmd mailcatcher
@@ -260,29 +268,25 @@ check_deps() {
 }
 
 clone_repository() {
-	local src_path="/home/odoo/src"
 	local repo_name="$1"
-	log "${BLUE}  Check and clone ${repo_name} repositorie into ${src_path}/\n  Might be long if it's the first install on your laptop, so, take a coffee... ${ENDCOLOR}"
-	cd $src_path
+	log "${BLUE}  Check and clone ${repo_name} repositorie into $ODOO_REPO_PATH/\n  Might be long if it's the first install on your laptop, so, take a coffee... ${ENDCOLOR}"
+	cd $ODOO_REPO_PATH
 	if [[ ! -d "$repo_name" ]]; then
 		git clone --progress "git@github.com:odoo/${repo_name}.git" 2>&1 | tee -a "$LOG"
 	else
-		if [[ "$UPDATE_MODE" != 1 ]]; then
-			answer=$(inputdata "${GREEN}'${repo_name}' directory already exists, do you want to overwrite it ? [y/N]: ${ENDCOLOR}")
-			if [[ "$answer" =~ ^[Yy]$ ]]; then
-				run rm -rf "./${repo_name}"
-				git clone --progress "git@github.com:odoo/${repo_name}.git" 2>&1 | tee -a "$LOG"
-				log "${BLUE} Skipping clone of '${repo_name}'.${ENDCOLOR}"
-			fi
-		fi
+        answer=$(inputdata "${GREEN}'${repo_name}' directory already exists, do you want to overwrite it ? [y/N]: ${ENDCOLOR}")
+        if [[ "$answer" =~ ^[Yy]$ ]]; then
+            run rm -rf "./${repo_name}"
+            git clone --progress "git@github.com:odoo/${repo_name}.git" 2>&1 | tee -a "$LOG"
+            log "${BLUE} Skipping clone of '${repo_name}'.${ENDCOLOR}"
+        fi
 	fi
 }
 
 update_repository() {
-	local src_path="/home/odoo/src"
 	local repo_name="$1"
 	log "${BLUE}  Switching repositories ${repo_name} to master and update it ...${ENDCOLOR}"
-	cd "${src_path}/${repo_name}"
+	cd "${ODOO_REPO_PATH}/${repo_name}"
 	git switch master
 	log "Last '${repo_name}' commit HASH : $(git rev-parse HEAD)"
 	git pull --rebase --progress 2>&1 | tee -a "$LOG"
@@ -291,8 +295,7 @@ update_repository() {
 
 fetch_git_repositories() {
 	# clone ony master branch to save disk space and cloning time
-	local src_path="/home/odoo/src"
-	mkdir -p "${src_path}"
+	mkdir -p "${ODOO_REPO_PATH}"
 
 	clone_repository "odoo"
 	clone_repository "enterprise"
@@ -312,9 +315,8 @@ fetch_git_repositories() {
 }
 
 debinstall_sh() {
-    local src_path="/home/odoo/src"
     echo "${BLUE} Installing required packages: ${ENDCOLOR}"
-	run_sudo "${src_path}/odoo/setup/debinstall.sh"
+	run_sudo "${ODOO_REPO_PATH}/odoo/setup/debinstall.sh"
 }
 
 postgresql_setup() {
@@ -353,7 +355,7 @@ create_database() {
 		echo "${RED}Invalid name: only a-z, A-Z, 0-9, _ and - allowed.${ENDCOLOR}"
 	done
 	if [[ -n "$DB_NAME" ]]; then
-		cd /home/odoo/src/odoo
+		cd "$ODOO_REPO_PATH/odoo"
 		log "${BLUE}Creating database '$DB_NAME' (a few minutes) ...${ENDCOLOR}"
 		run python3 odoo-bin -c /home/odoo/.odoorc -d "$DB_NAME" -i base --stop-after-init
 	fi
@@ -387,12 +389,12 @@ check_memory() {
 	fi
 }
 
-add_alias() { # TODO find a way to add this alias in the terminal used by the user
+add_alias() { # TODO find a way to add this alias in the terminal used by the user -> add a small wrapper in PATH
 	if grep -qw $ALIAS_NAME /home/odoo/.bashrc; then
 		log "${BLUE}Alias already exists. Skipping.${ENDCOLOR}"
 	else
 		log "${BLUE}Adding a bash alias${ENDCOLOR}"
-		echo "alias $ALIAS_NAME='cd /home/odoo/src/odoo; python3 ./odoo-bin'" >>/home/odoo/.bashrc
+		echo "alias $ALIAS_NAME='cd $ODOO_REPO_PATH/odoo; python3 ./odoo-bin'" >>/home/odoo/.bashrc
 	fi
 }
 
@@ -408,7 +410,7 @@ add_desktop_shortcuts() {
 
 	{
 		echo "[Desktop Entry]"
-		echo "Exec=/home/odoo/src/odoo/odoo-bin"
+		echo "Exec=$ODOO_REPO_PATH/odoo/odoo-bin"
 		echo "GenericName=Launch Odoo Local DB"
 		echo "Icon=system-run"
 		echo "Name=Launch Odoo Local DB"
@@ -418,30 +420,37 @@ add_desktop_shortcuts() {
 	} >"$ODOO_SHORTCUT_PATH"
 }
 
+install_odev() {
+    if [ -d "$ODEV_REPO_PATH" ]; then
+        log "${BLUE}Odev repository already exists. Updating it..."
+        cd "$ODEV_REPO_PATH"
+        git pull
+    else
+        git clone --progress "git@github.com:odoo-odev/odev.git" "$ODEV_REPO_PATH" 2>&1 | tee -a "$LOG"
+        cd "$ODEV_REPO_PATH"
+    fi
+    ./install.sh
+    odev setup
+}
+
 print_end_message() {
 	log "${BLUE}Installation complete.${ENDCOLOR}"
 	echo "${BLUE}Full log: $LOG${ENDCOLOR}"
 	echo "${BLUE}To start the new DB enter this command in a new terminal:${ENDCOLOR}"
-	echo "${BLUE}	cd /home/odoo/src/odoo && python3 ./odoo-bin ${ENDCOLOR}"
+	echo "${BLUE}	cd $ODOO_REPO_PATH/odoo && python3 ./odoo-bin ${ENDCOLOR}"
 	echo "${BLUE}This will start your DB, that you will be able to manage on http://localhost:8069/web/database/manager (shortcut added to your desktop) ${ENDCOLOR}"
 	echo "${BLUE}To end the DB, press CTRL + c${ENDCOLOR}"
 }
 
 odoo_local_installation() {
 	clear
-	answer=$(inputdata "${GREEN}Do you need advanced installation options ? Support for right-to-left languages (Arabic, Hebrew) and local emails service (mailcatcher). Only needed if you work with those [y/N]: ${ENDCOLOR}")
-	if [[ "$answer" =~ ^[Yy]$ ]]; then
-		ADVANCED_MODE=1
-	fi
 	check_memory
 	check_ubuntu
 	check_python
 	install_deps
 	check_ssh_key
-	if [[ "$ADVANCED_MODE" == 1 ]]; then
-		install_rtlcss      # right-to-left
-		install_mailcatcher # mail
-	fi
+    install_rtlcss      # right-to-left
+    install_mailcatcher # mail
 	fetch_git_repositories
 	postgresql_setup
 	setup_odoorc # Prior create_database to add enterprise in path
@@ -449,62 +458,18 @@ odoo_local_installation() {
 	set_expiration_date
 	add_alias
 	add_desktop_shortcuts
+    install_odev
 	print_end_message
 }
 
-update_installation() {
-	UPDATE_MODE=1 #Do not annoy user for overwrite questions
-	clear
-	answer=$(inputdata "${RED}This will highly probably BREAK YOUR EXISTING DATABASES. Are you sure you want to continue [y/N]: ${ENDCOLOR}")
-	if [[ "$answer" =~ ^[Yy]$ ]]; then
-		fetch_git_repositories
-	fi
-}
-
-debugging() {
-	echo "debugmode"
-	update_installation
-}
-
-menu() {
-	local start_time
-	local stop_time
-
+if [ $# -eq 0 ]; then
 	start_time=$(date +%s)
-	echo "${BLUE}Odoo Local Database installer${ENDCOLOR}"
-	echo "${BLUE}#############################${ENDCOLOR}"
-	echo "${BLUE}Script v20.02 following Odoo 20 - OXP 2026${ENDCOLOR}"
-	echo "${BLUE}Documentation: ${knowledge_article} ${ENDCOLOR}"
-	echo "${BLUE}1) Complete install ${ENDCOLOR}"
-	echo "${BLUE}2) Check tools (only check your laptop have all dependencies installed, if not install them) ${ENDCOLOR}"
-	echo "${BLUE}3) Update this install (including update your code) ${ENDCOLOR}"
-	echo "${BLUE}4) Exit ${ENDCOLOR}"
-	choice=$(inputdata "${GREEN}Select option [1-4]: ${ENDCOLOR}")
-	case "$choice" in
-	1)
-		ask_password
-		create_log_file
-		odoo_local_installation
-		;;
-	2) check_deps ;;
-	3)
-		ask_password
-		create_log_file
-		update_installation
-		;;
-	4) exit 0 ;;
-	deb) debugging ;;
-	*)
-		echo "${RED}Invalid option${ENDCOLOR}"
-		menu
-		;;
-	esac
-	unset USER_PASSWORD
-
+    ask_password
+    create_log_file
+    odoo_local_installation
 	stop_time=$(date +%s)
 	run_time=$((stop_time - start_time))
-
 	log "Run duration: ${run_time}s"
-}
-
-menu
+elif [ "$1" == "check" ]; then
+    check_deps
+fi
