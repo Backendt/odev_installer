@@ -313,6 +313,13 @@ install_odev() {
         cd "$ODEV_REPO_PATH"
     fi
     ./install.sh
+
+    if [ -d /home/odoo/odoo ]; then
+        log "${BLUE}Odoo directory (/home/odoo/odoo) already exists. Renaming it 'old_odoo'${ENDCOLOR}"
+        rm -rf /home/odoo/old_odoo
+        mv /home/odoo/odoo /home/odoo/old_odoo
+    fi
+
     odev setup -f
     log "${BLUE}Odev is installed ! Installing plugins..${ENDCOLOR}"
     odev plugin --enable odoo-odev/odev-plugin-ai
