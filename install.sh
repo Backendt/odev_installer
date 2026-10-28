@@ -339,7 +339,7 @@ install_odev() {
 		cd "$ODEV_REPO_PATH"
 		git pull
 	else
-		git clone --progress "git@github.com:odoo-odev/odev.git" "$ODEV_REPO_PATH" 2>&1 | tee -a "$LOG"
+		git clone --progress -b beta "git@github.com:odoo-odev/odev.git" "$ODEV_REPO_PATH" 2>&1 | tee -a "$LOG"
 		cd "$ODEV_REPO_PATH"
 	fi
 	./install.sh
@@ -352,7 +352,7 @@ install_odev() {
 
 	odev setup -f
 	log "${BLUE}Odev is installed ! Installing plugins..${ENDCOLOR}"
-	odev plugin -f --enable odoo-odev/odev-plugin-ai
+	odev plugin -b beta -f --enable odoo-odev/odev-plugin-ai
 }
 
 install_deadsnake_ppa() {
