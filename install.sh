@@ -90,7 +90,7 @@ install_cmd() {
 ask_password() {
 	while read -r -t 0; do read -r; done
 	while ! (echo "$USER_PASSWORD" | sudo -S -k -v >/dev/null 2>&1); do
-        USER_PASSWORD=$(systemd-ask-password "Enter your password:")
+		USER_PASSWORD=$(systemd-ask-password "Enter your password:")
 		echo ""
 	done
 }
@@ -102,7 +102,7 @@ check_ssh_key() {
 	local ssh_pub_key_path="/home/odoo/.ssh/id_ed25519.pub"
 	user_gram="$(cut -d '-' -f 1 </etc/hostname)"
 	if [[ -f "${ssh_pub_key_path}" ]]; then
-        log "${BLUE}An SSH key is already present.${ENDCOLOR}"
+		log "${BLUE}An SSH key is already present.${ENDCOLOR}"
 	else
 		log "${BLUE}SSH key not found. Generating new ed25519 SSH key for '${user_gram}@odoo.com'.${ENDCOLOR}"
 		log "${BLUE}Path to add the key: ${ssh_key_path}${ENDCOLOR}"
@@ -118,13 +118,12 @@ check_ssh_key() {
 		if git ls-remote git@github.com:odoo/enterprise.git HEAD >/dev/null 2>&1; then
 			log "${BLUE}GitHub SSH access validated${ENDCOLOR}"
 			break
-        else
-            log "${BLUE}No GitHub SSH access. Please add this SSH key to your Github account:"
-            log "$(<$ssh_pub_key_path)"
-            xdg-open "https://github.com/settings/keys"
+		else
+			log "${BLUE}No GitHub SSH access. Please add this SSH key to your Github account:"
+			log "$(<$ssh_pub_key_path)"
+			xdg-open "https://github.com/settings/keys"
 		fi
-		echo "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
-        read -r _
+		read -rp "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
 	done
 }
 
@@ -181,10 +180,10 @@ install_wkhtmltopdf() {
 	rm -f /tmp/wkhtml.deb
 }
 
-install_phonenumbers(){
+install_phonenumbers() {
 	log "${BLUE}  Installing python3-phonenumbers ...${ENDCOLOR}"
 	run_sudo apt-get install -y python3-phonenumbers
-	if python3 -c "import phonenumbers" &> /dev/null ; then
+	if python3 -c "import phonenumbers" &>/dev/null; then
 		ok "python3-phonenumbers installed"
 	else
 		fail "python3-phonenumbers failed to install"
@@ -194,33 +193,32 @@ install_phonenumbers(){
 install_pgvector() {
 	log "${BLUE}  Installing pgvector ...${ENDCOLOR}"
 	run_sudo apt-get install -y postgresql-common
-    if [ ! -f /etc/apt/sources.list.d/pgdg.sources ]; then
-        log "${BLUE}Running apt.postgresql.org.sh${ENDCOLOR}"
-        run_sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-    fi
+	if [ ! -f /etc/apt/sources.list.d/pgdg.sources ]; then
+		run_sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+	fi
 	run_sudo apt-get install -y "postgresql-${POSTGRES_VERSION}-pgvector"
-    cp "$(pg_config --sharedir)/extension/vector.control" /tmp/vector.control
+	cp "$(pg_config --sharedir)/extension/vector.control" /tmp/vector.control
 	echo 'trusted = true' | tee -a /tmp/vector.control
-    run_sudo mv /tmp/vector.control "$(pg_config --sharedir)/extension/vector.control" 
+	run_sudo mv /tmp/vector.control "$(pg_config --sharedir)/extension/vector.control"
 }
 
 install_claude() {
-    log "${BLUE}Installing claude code...${ENDCOLOR}"
-    run_sudo curl -fsSL 'https://downloads.claude.ai/keys/claude-code.asc' \
-  -o /etc/apt/keyrings/claude-code.asc
-    echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" > /tmp/claude.list
-    run_sudo mv /tmp/claude.list /etc/apt/sources.list.d/claude-code.list
-    run_sudo apt-get update
-    install_cmd claude claude-code
+	log "${BLUE}Installing claude code...${ENDCOLOR}"
+	run_sudo curl -fsSL 'https://downloads.claude.ai/keys/claude-code.asc' \
+		-o /etc/apt/keyrings/claude-code.asc
+	echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" >/tmp/claude.list
+	run_sudo mv /tmp/claude.list /etc/apt/sources.list.d/claude-code.list
+	run_sudo apt-get update
+	install_cmd claude claude-code
 
-    log "${BLUE}Installing odoo-ps claude-code skills...${ENDCOLOR}"
-    install_cmd npm # Note that removing npm also removes the skills
-    npx -y skills add 'odoo-ps/ps-ai-skills#main' --skill odev --skill odoo_coding_guidelines -g -y > /dev/null
+	log "${BLUE}Installing odoo-ps claude-code skills...${ENDCOLOR}"
+	mkdir -p "/home/odoo/.agents"
+	git clone --progress "git@github.com:odoo-ps/ps-ai-skills.git" "/home/odoo/.agents/" 2>&1 | tee -a "$LOG"
 
-    log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
-    echo -e "#!/bin/sh\nodev ai -f" > ~/.local/bin/claude
-    chmod +x ~/.local/bin/claude
-    hash -r 2>/dev/null || true
+	log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
+	echo -e "#!/bin/sh\nodev ai -f" >~/.local/bin/claude
+	chmod +x ~/.local/bin/claude
+	hash -r 2>/dev/null || true
 }
 
 install_deps() {
@@ -230,7 +228,6 @@ install_deps() {
 	install_cmd gpg gnupg
 	install_cmd psql postgresql-18
 	install_cmd virtualenv python3-virtualenv
-    install_claude
 	install_phonenumbers
 	install_wkhtmltopdf
 	install_pgvector
@@ -254,7 +251,7 @@ check_deps() {
 }
 
 debinstall_sh() {
-    echo "${BLUE} Installing required packages: ${ENDCOLOR}"
+	echo "${BLUE} Installing required packages: ${ENDCOLOR}"
 	curl -s "${ODOO_DEBINSTALL_PATH}" | run_sudo sh /tmp/debinstall.sh
 }
 
@@ -303,34 +300,34 @@ check_memory() {
 }
 
 install_odev() {
-    if [ -d "$ODEV_REPO_PATH" ]; then
-        log "${BLUE}Odev repository already exists. Updating it...${ENDCOLOR}"
-        cd "$ODEV_REPO_PATH"
-        git pull
-    else
-        git clone --progress "git@github.com:odoo-odev/odev.git" "$ODEV_REPO_PATH" 2>&1 | tee -a "$LOG"
-        cd "$ODEV_REPO_PATH"
-    fi
-    ./install.sh
+	if [ -d "$ODEV_REPO_PATH" ]; then
+		log "${BLUE}Odev repository already exists. Updating it...${ENDCOLOR}"
+		cd "$ODEV_REPO_PATH"
+		git pull
+	else
+		git clone --progress "git@github.com:odoo-odev/odev.git" "$ODEV_REPO_PATH" 2>&1 | tee -a "$LOG"
+		cd "$ODEV_REPO_PATH"
+	fi
+	./install.sh
 
-    if [ -d /home/odoo/odoo ]; then
-        log "${BLUE}Odoo directory (/home/odoo/odoo) already exists. Renaming it 'old_odoo'${ENDCOLOR}"
-        rm -rf /home/odoo/old_odoo
-        mv /home/odoo/odoo /home/odoo/old_odoo
-    fi
+	if [ -d /home/odoo/odoo ]; then
+		log "${BLUE}Odoo directory (/home/odoo/odoo) already exists. Renaming it 'old_odoo'${ENDCOLOR}"
+		rm -rf /home/odoo/old_odoo
+		mv /home/odoo/odoo /home/odoo/old_odoo
+	fi
 
-    odev setup -f
-    log "${BLUE}Odev is installed ! Installing plugins..${ENDCOLOR}"
-    odev plugin --enable odoo-odev/odev-plugin-ai
+	odev setup -f
+	log "${BLUE}Odev is installed ! Installing plugins..${ENDCOLOR}"
+	odev plugin --enable odoo-odev/odev-plugin-ai
 }
 
 install_deadsnake_ppa() {
-    if compgen -G '/etc/apt/sources.list.d/deadsnakes-ubuntu-ppa-*.sources' > /dev/null; then
-        log "${BLUE}Deadsnakes PPA is already installed. Skipping..${ENDCOLOR}"
-        return 0
-    fi
-    run_sudo add-apt-repository ppa:deadsnakes/ppa -y
-    run_sudo apt update
+	if compgen -G '/etc/apt/sources.list.d/deadsnakes-ubuntu-ppa-*.sources' >/dev/null; then
+		log "${BLUE}Deadsnakes PPA is already installed. Skipping..${ENDCOLOR}"
+		return 0
+	fi
+	run_sudo add-apt-repository ppa:deadsnakes/ppa -y
+	run_sudo apt update
 }
 
 odoo_local_installation() {
@@ -342,19 +339,19 @@ odoo_local_installation() {
 	check_ssh_key
 	postgresql_setup
 	setup_odoorc # Prior create_database to add enterprise in path
-	set_expiration_date
-    install_deadsnake_ppa
-    install_odev
+	install_deadsnake_ppa
+	install_claude
+	install_odev
 }
 
 if [ $# -eq 0 ]; then
 	start_time=$(date +%s)
-    ask_password
-    create_log_file
-    odoo_local_installation
+	ask_password
+	create_log_file
+	odoo_local_installation
 	stop_time=$(date +%s)
 	run_time=$((stop_time - start_time))
 	log "Run duration: ${run_time}s"
 elif [ "$1" == "check" ]; then
-    check_deps
+	check_deps
 fi
