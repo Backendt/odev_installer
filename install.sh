@@ -10,6 +10,7 @@ DEBUG_FILE="/var/log/odev_installer.debug"
 LOG="/var/log/odev_installer.log"
 DB_NAME=""
 USER_PASSWORD=""
+CLIPBOARD_TOOL="cat"
 POSTGRES_VERSION=18
 ODOO_DEBINSTALL_PATH="https://raw.githubusercontent.com/odoo/odoo/refs/heads/$ODOO_VERSION/setup/debinstall.sh"
 ODEV_REPO_PATH="/home/odoo/odev"
@@ -119,11 +120,16 @@ check_ssh_key() {
 			log "${BLUE}GitHub SSH access validated${ENDCOLOR}"
 			break
 		else
-			log "${BLUE}No GitHub SSH access. Please add this SSH key to your Github account:"
-			log "$(<$ssh_pub_key_path)"
+            log "${BLUE}No GitHub SSH access. Please add the SSH Key to your GitHub account".
+            echo "$(<$ssh_pub_key_path)" | $CLIPBOARD_TOOL
+            if [ "$CLIPBOARD_TOOL" == "cat" ]; then
+                log "${RED}Copy the key above with Ctrl+Maj+C, not with Ctrl+C !${ENDCOLOR}"
+            else
+                log "${GREEN}The SSH key has been copied to your clipboard !${ENDCOLOR}"
+            fi
 			xdg-open "https://github.com/settings/keys"
 		fi
-		read -rp "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
+		read -rp "${BLUE}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
 	done
 }
 
@@ -221,6 +227,19 @@ install_claude() {
 	hash -r 2>/dev/null || true
 }
 
+install_clipboard_util() {
+    log "${BLUE}Installing clipboard util...${ENDCOLOR}"
+    if [ "$XDG_SESSION_TYPE" == "wayland" ]; then
+        install_cmd wl-copy wl-clipboard
+        CLIPBOARD_TOOL="wl-copy"
+    elif [ "$XDG_SESSION_TYPE" == "x11" ]; then
+        install_cmd xclip
+        CLIPBOARD_TOOL="xclip -selection clipboard"
+    else
+        log "${RED}Unknown display server type. No clipboard tool installed${ENDCOLOR}"
+    fi
+}
+
 install_deps() {
 	log "${BLUE}Installing system dependencies ...${ENDCOLOR}"
 	install_cmd git
@@ -231,6 +250,7 @@ install_deps() {
 	install_phonenumbers
 	install_wkhtmltopdf
 	install_pgvector
+    install_clipboard_util
 	log "${BLUE}Dependencies ready.${ENDCOLOR}"
 }
 
