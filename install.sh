@@ -339,7 +339,6 @@ odoo_local_installation() {
 	check_ssh_key
 	postgresql_setup
 	setup_odoorc # Prior create_database to add enterprise in path
-	set_expiration_date
 	install_deadsnake_ppa
 	install_claude
 	install_odev
