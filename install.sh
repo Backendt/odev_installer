@@ -194,7 +194,7 @@ install_pgvector() {
 	log "${BLUE}  Installing pgvector ...${ENDCOLOR}"
 	run_sudo apt-get install -y postgresql-common
 	if [ ! -f /etc/apt/sources.list.d/pgdg.sources ]; then # TODO test it
-		run_sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+		run_sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 	fi
 	run_sudo apt-get install -y "postgresql-${POSTGRES_VERSION}-pgvector"
 	cp "$(pg_config --sharedir)/extension/vector.control" /tmp/vector.control
