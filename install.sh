@@ -224,8 +224,20 @@ install_claude() {
 	git clone --progress "git@github.com:odoo-ps/ps-ai-skills.git" "/home/odoo/.agents/" 2>&1 | tee -a "$LOG"
 
 	log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
-	echo -e "#!/bin/sh\nodev ai -f" >~/.local/bin/claude
-	chmod +x ~/.local/bin/claude
+	echo -e "#!/bin/sh\nodev ai -f" > "/tmp/claude.sh"
+
+    local alias_dir=~/.local/bin
+    if [ -d ~/.local/bin ]; then
+        alias_dir=~/.local/bin
+    elif [ -d /usr/local/bin ]; then
+        alias_dir=/usr/local/bin
+    else
+        log "${RED}Did not find any valid directory for the claude alias. Please contact a sysadmin"
+        exit 1
+    fi
+    log "${BLUE}Installing claude alias to '$alias_dir'${ENDCOLOR}"
+    run_sudo mv /tmp/claude.sh "$alias_dir/claude"
+	run_sudo chmod +x "$alias_dir/claude"
 	hash -r 2>/dev/null || true
 }
 
