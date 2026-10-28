@@ -352,7 +352,7 @@ install_odev() {
 
 	odev setup -f
 	log "${BLUE}Odev is installed ! Installing plugins..${ENDCOLOR}"
-	odev plugin --enable odoo-odev/odev-plugin-ai
+	odev plugin -f --enable odoo-odev/odev-plugin-ai
 }
 
 install_deadsnake_ppa() {
