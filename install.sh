@@ -193,7 +193,7 @@ install_phonenumbers() {
 install_pgvector() {
 	log "${BLUE}  Installing pgvector ...${ENDCOLOR}"
 	run_sudo apt-get install -y postgresql-common
-	if [ ! -f /etc/apt/sources.list.d/pgdg.sources ]; then # TODO test it
+	if [ ! -f /etc/apt/sources.list.d/pgdg.sources ]; then
 		run_sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 	fi
 	run_sudo apt-get install -y "postgresql-${POSTGRES_VERSION}-pgvector"
