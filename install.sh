@@ -212,8 +212,8 @@ install_claude() {
 	install_cmd claude claude-code
 
 	log "${BLUE}Installing odoo-ps claude-code skills...${ENDCOLOR}"
-	install_cmd npm # Note that removing npm also removes the skills
-	npx -y skills add 'odoo-ps/ps-ai-skills#main' --skill odev --skill odoo_coding_guidelines -g -y >/dev/null
+	mkdir -p "/home/odoo/.agents"
+	git clone --progress "git@github.com:odoo-ps/ps-ai-skills.git" "/home/odoo/.agents/" 2>&1 | tee -a "$LOG"
 
 	log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
 	echo -e "#!/bin/sh\nodev ai -f" >~/.local/bin/claude
