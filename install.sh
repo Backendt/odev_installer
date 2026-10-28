@@ -228,7 +228,6 @@ install_deps() {
 	install_cmd gpg gnupg
 	install_cmd psql postgresql-18
 	install_cmd virtualenv python3-virtualenv
-	install_claude
 	install_phonenumbers
 	install_wkhtmltopdf
 	install_pgvector
@@ -342,6 +341,7 @@ odoo_local_installation() {
 	setup_odoorc # Prior create_database to add enterprise in path
 	set_expiration_date
 	install_deadsnake_ppa
+	install_claude
 	install_odev
 }
 
