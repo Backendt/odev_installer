@@ -218,10 +218,8 @@ install_claude() {
 	install_cmd claude claude-code
 
 	log "${BLUE}Installing odoo-ps claude-code skills...${ENDCOLOR}"
-    rm -rf "/home/odoo/.agents.old/" 2>/dev/null
-    mv "/home/odoo/.agents" "/home/odoo/.agents.old" 2>/dev/null || true
-	mkdir -p "/home/odoo/.agents"
-	git clone --progress "git@github.com:odoo-ps/ps-ai-skills.git" "/home/odoo/.agents/" 2>&1 | tee -a "$LOG"
+    install_cmd npm
+    npx -y skills add 'odoo-ps/ps-ai-skills#main' --skill odev --skill odoo_coding_guidelines -g -y > /dev/null
 
 	log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
 	echo -e "#!/bin/sh\nodev ai -f" > "/tmp/claude.sh"
