@@ -123,7 +123,7 @@ check_ssh_key() {
 			log "$(<$ssh_pub_key_path)"
 			xdg-open "https://github.com/settings/keys"
 		fi
-		read -r "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
+		read -rp "${GREEN}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
 	done
 }
 
