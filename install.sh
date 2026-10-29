@@ -222,6 +222,8 @@ install_claude() {
     mv "/home/odoo/.agents" "/home/odoo/.agents.old" 2>/dev/null || true
 	mkdir -p "/home/odoo/.agents"
 	git clone --progress "git@github.com:odoo-ps/ps-ai-skills.git" "/home/odoo/.agents/" 2>&1 | tee -a "$LOG"
+    mkdir -p "/home/odoo/.claude/"
+    ln -s "/home/odoo/.agents/skills" "/home/odoo/.claude/skills"
 
 	log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
 	echo -e "#!/bin/sh\nodev ai -f" > "/tmp/claude.sh"
@@ -238,6 +240,7 @@ install_claude() {
     log "${BLUE}Installing claude alias to '$alias_dir'${ENDCOLOR}"
     run_sudo mv /tmp/claude.sh "$alias_dir/claude"
 	run_sudo chmod +x "$alias_dir/claude"
+
 	hash -r 2>/dev/null || true
 }
 
