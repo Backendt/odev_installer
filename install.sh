@@ -298,9 +298,9 @@ postgresql_setup() {
 	if sudo -u postgres psql -t -c '\du' | cut -f 1 -d \| | grep -qw odoo; then
 		log "${BLUE} Odoo PostgreSQL User already exists. Skipping.${ENDCOLOR}"
 	else
-		run_sudo sudo -u postgres createuser -d -R -S odoo
+		run sudo -nu postgres createuser -d -R -S odoo
 	fi
-	run_sudo sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS vector;" # ALL FUTUR DB will get it
+	run sudo -nu postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS vector;" # ALL FUTUR DB will get it
 }
 
 setup_odoorc() {
