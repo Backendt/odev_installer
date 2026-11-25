@@ -223,6 +223,8 @@ install_claude() {
 	mkdir -p "/home/odoo/.agents"
 	git clone --progress "git@github.com:odoo-ps/ps-ai-skills.git" "/home/odoo/.agents/" 2>&1 | tee -a "$LOG"
 
+	ls -l "/home/odoo/.claude.json" >/dev/null 2>&1 || echo '{}' > /home/odoo/.claude.json
+
 	log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
 	echo -e "#!/bin/sh\nodev ai -f" > "/tmp/claude.sh"
 
@@ -353,6 +355,8 @@ install_odev() {
 	odev setup -f
 	log "${BLUE}Odev is installed ! Installing plugins..${ENDCOLOR}"
 	odev plugin -f --enable odoo-odev/odev-plugin-ai
+	odev plugin -f --enable odoo-odev/odev-plugin-ai-scaffold
+	odev config ai_scaffold.task_database openerp
 }
 
 install_deadsnake_ppa() {
