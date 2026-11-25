@@ -120,13 +120,13 @@ check_ssh_key() {
 			log "${BLUE}GitHub SSH access validated${ENDCOLOR}"
 			break
 		else
-            log "${BLUE}No GitHub SSH access. Please add the SSH Key to your GitHub account".
-            echo "$(<$ssh_pub_key_path)" | $CLIPBOARD_TOOL
-            if [ "$CLIPBOARD_TOOL" == "cat" ]; then
-                log "${RED}Copy the key above with Ctrl+Maj+C, not with Ctrl+C !${ENDCOLOR}"
-            else
-                log "${GREEN}The SSH key has been copied to your clipboard !${ENDCOLOR}"
-            fi
+			log "${BLUE}No GitHub SSH access. Please add the SSH Key to your GitHub account".
+			echo "$(<$ssh_pub_key_path)" | $CLIPBOARD_TOOL
+			if [ "$CLIPBOARD_TOOL" == "cat" ]; then
+				log "${RED}Copy the key above with Ctrl+Maj+C, not with Ctrl+C !${ENDCOLOR}"
+			else
+				log "${GREEN}The SSH key has been copied to your clipboard !${ENDCOLOR}"
+			fi
 			xdg-open "https://github.com/settings/keys"
 		fi
 		read -rp "${BLUE}Press enter when your public key was added to your GitHub account... ${ENDCOLOR}"
@@ -217,41 +217,43 @@ install_claude() {
 	run_sudo apt-get update
 	install_cmd claude claude-code
 
+	ls -l "/home/odoo/.claude.json" || echo '{}' >"/home/odoo/.claude.json"
+
 	log "${BLUE}Installing odoo-ps claude-code skills...${ENDCOLOR}"
-    rm -rf "/home/odoo/.agents.old/" 2>/dev/null
-    mv "/home/odoo/.agents" "/home/odoo/.agents.old" 2>/dev/null || true
+	rm -rf "/home/odoo/.agents.old/" 2>/dev/null
+	mv "/home/odoo/.agents" "/home/odoo/.agents.old" 2>/dev/null || true
 	mkdir -p "/home/odoo/.agents"
 	git clone --progress "git@github.com:odoo-ps/ps-ai-skills.git" "/home/odoo/.agents/" 2>&1 | tee -a "$LOG"
 
 	log "${BLUE}Adding claude-code alias...${ENDCOLOR}"
-	echo -e "#!/bin/sh\nodev ai -f" > "/tmp/claude.sh"
+	echo -e "#!/bin/sh\nodev ai -f" >"/tmp/claude.sh"
 
-    local alias_dir=~/.local/bin
-    if [ -d ~/.local/bin ]; then
-        alias_dir=~/.local/bin
-    elif [ -d /usr/local/bin ]; then
-        alias_dir=/usr/local/bin
-    else
-        log "${RED}Did not find any valid directory for the claude alias. Please contact a sysadmin"
-        exit 1
-    fi
-    log "${BLUE}Installing claude alias to '$alias_dir'${ENDCOLOR}"
-    run_sudo mv /tmp/claude.sh "$alias_dir/claude"
+	local alias_dir=~/.local/bin
+	if [ -d ~/.local/bin ]; then
+		alias_dir=~/.local/bin
+	elif [ -d /usr/local/bin ]; then
+		alias_dir=/usr/local/bin
+	else
+		log "${RED}Did not find any valid directory for the claude alias. Please contact a sysadmin"
+		exit 1
+	fi
+	log "${BLUE}Installing claude alias to '$alias_dir'${ENDCOLOR}"
+	run_sudo mv /tmp/claude.sh "$alias_dir/claude"
 	run_sudo chmod +x "$alias_dir/claude"
 	hash -r 2>/dev/null || true
 }
 
 install_clipboard_util() {
-    log "${BLUE}Installing clipboard util...${ENDCOLOR}"
-    if [ "$XDG_SESSION_TYPE" == "wayland" ]; then
-        install_cmd wl-copy wl-clipboard
-        CLIPBOARD_TOOL="wl-copy"
-    elif [ "$XDG_SESSION_TYPE" == "x11" ]; then
-        install_cmd xclip
-        CLIPBOARD_TOOL="xclip -selection clipboard"
-    else
-        log "${RED}Unknown display server type. No clipboard tool installed${ENDCOLOR}"
-    fi
+	log "${BLUE}Installing clipboard util...${ENDCOLOR}"
+	if [ "$XDG_SESSION_TYPE" == "wayland" ]; then
+		install_cmd wl-copy wl-clipboard
+		CLIPBOARD_TOOL="wl-copy"
+	elif [ "$XDG_SESSION_TYPE" == "x11" ]; then
+		install_cmd xclip
+		CLIPBOARD_TOOL="xclip -selection clipboard"
+	else
+		log "${RED}Unknown display server type. No clipboard tool installed${ENDCOLOR}"
+	fi
 }
 
 install_deps() {
@@ -264,7 +266,7 @@ install_deps() {
 	install_phonenumbers
 	install_wkhtmltopdf
 	install_pgvector
-    install_clipboard_util
+	install_clipboard_util
 	log "${BLUE}Dependencies ready.${ENDCOLOR}"
 }
 
